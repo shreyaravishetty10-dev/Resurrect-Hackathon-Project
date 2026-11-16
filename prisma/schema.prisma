@@ -1,0 +1,64 @@
+// ZK-GitProof Prisma Schema
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Badge {
+  id                    String              @id // e.g. "zk-rust-15pr-88"
+  candidateId           String              @map("candidate_id")
+  candidateRole         String              @default("Developer") @map("candidate_role")
+  skillTitle            String              @map("skill_title")
+  language              String
+  minPrThreshold        Int                 @map("min_pr_threshold")
+  companyRedacted       String              @default("[REDACTED]") @map("company_redacted")
+  repoRedacted          String              @default("[REDACTED]") @map("repo_redacted")
+  sourceCodeStatus      String              @default("[NEVER EXPOSED]") @map("source_code_status")
+  dateRange             String              @map("date_range")
+  
+  // ZK Cryptography
+  merkleRoot            String              @map("merkle_root")
+  witnessCommitment     String              @map("witness_commitment")
+  zkSignature           String              @map("zk_signature")
+  zkCurve               String              @default("BN254 (alt_bn128)") @map("zk_curve")
+  zkProofPayload        Json                @map("zk_proof_payload")
+  githubTlsFingerprint  String              @map("github_tls_fingerprint")
+  
+  // Phase 2: Anti-Gaming
+  antiGamingPassed      Boolean             @default(true) @map("anti_gaming_passed")
+  collaboratorsCount    Int                 @map("collaborators_count")
+  diffLinesChanged      Int                 @map("diff_lines_changed")
+  
+  // Phase 3: Enterprise Mode
+  enterpriseMode        Boolean             @default(false) @map("enterprise_mode")
+  coSignatureToken      String?             @map("co_signature_token")
+  
+  status                String              @default("VALID")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  
+  coSignatures          ManagerCoSignature[]
+
+  @@map("badges")
+}
+
+model ManagerCoSignature {
+  id                     String    @id @default(uuid())
+  token                  String    @unique
+  badgeId                String    @map("badge_id")
+  managerName            String    @map("manager_name")
+  managerTitle           String    @map("manager_title")
+  managerCompany         String    @map("manager_company")
+  managerEmail           String    @map("manager_email")
+  endorsementNote        String?   @map("endorsement_note")
+  cryptographicSignature String?   @map("cryptographic_signature")
+  signedAt               DateTime  @default(now()) @map("signed_at")
+
+  badge                  Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@map("manager_co_signatures")
+}
